@@ -1,44 +1,66 @@
-const express = require('express')
-
+const express = require('express') ; 
+const connectDB = require('./src/db/mongodb') ;
+const User= require('./src/model/User') ; 
 const app = express() ; 
 
 app.use(express.json())
 app.use(express.urlencoded({extended:true})) ; 
 
-app.get('/', (req , res) => {
+connectDB() ;
+
+// learning CRUD methods in this get method
+app.get('/', async (req , res) => {
+    const data = "Hello World" ; 
     const obj = { 
         name:'Hussien Mohamed' , 
         age: 25 , 
-        Job:'Full Stack using NodeJs'
+        address:{
+            city:"Maadi, Cairo" , 
+            zipCode:"251520"
+        }, 
+        hobbies:["Fitness" , "Movies"] ,
+        Job:'Full Stack using NodeJs', 
+        
     }
-    res.send(obj)
+    const user = new User(obj) ; 
+    await user.save()
+    res.send(user)
 });
 
-app.get('/users' , (req , res)=>{
-    const data = {message : "Hello from API!"}  ; 
-    res.json(data) ; 
+// This method used to get all users in database
+app.get('/users' ,async (req , res)=>{
+    // const user = new User() ; 
+    const users = await User.find() ;
+    // const data = {message : `All users: ${users}`}  ; 
+    // res.json(users) ; 
+    res.send(users) ;
 }) ;
 
-app.get('/user/:userName' , (req, res)=> {
-    const userId = req.params.username 
+// get user with specific id from Database
+app.get('/user/:id' , async (req, res)=> {
+    const userId = req.params.id ;
+    const user = await User.findById(userId) ;  
     const obj = {name:req.query.name , age:req.query.age} ; 
     console.log(obj);
     const objStr = JSON.stringify(obj) ;
     const data = {message:`Hello from API User ID:  ${userId} ` , objStr} ;
-    res.json(data) ;
+    res.json(user) ;
 }); 
 
-
-app.post('/user',(req, res) =>{
+// add new user to database
+app.post('/newUser', async (req, res) =>{
     const userData = req.body ; 
+    const newUser = new User(userData) ;
+    await newUser.save()
     console.log(userData);
-    const data = {message: "User created successfully" , user:userData} ; 
-    res.json(data) ;
+    res.json(newUser) ;
     
-})
+}) 
 
 
-// full object
+
+
+// full object (update full object but not used in database)
 app.put('/user/:age' , (req , res)=>{
     // const age = req.query.age ; 
     
@@ -48,18 +70,30 @@ app.put('/user/:age' , (req , res)=>{
     res.json(data) ;
 }) ; 
 
-// partially object
-app.patch('/user/:id', (req , res) =>{
+
+
+// partially object (used in database)
+app.patch('/user/:id', async (req , res) =>{
+
     const userId = req.params.id ; 
-    const userData = req.body ; 
+    
+    const userData = req.body ;
+
+    let user = await User.findByIdAndUpdate(
+            {_id:userId} , 
+            {name:userData.name}, 
+                
+            );
     const data = {message: `User Id ${userId} partially updated successfully!` , user:userData} ; 
-    res.json(data) ; 
+    res.json(user) ; 
 
 })
 
-app.delete('/user/:username' , (req, res)=>{
-    const userName = req.params.username ; 
-    const data = {message: `User-name: ${userName} has been deleted successfully :)` } ; 
+// delete specific user with id from database
+app.delete('/user/:id' , async (req, res)=>{
+    const userId = req.params.id ;
+    await User.findOneAndDelete({_id:userId})
+    const data = {message: `User-name: ${userId} has been deleted successfully :)` } ; 
     res.json(data) 
 })
 
